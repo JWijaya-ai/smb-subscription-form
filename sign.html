@@ -199,7 +199,8 @@ const money = n => (n === null || n === undefined || n === "") ? "" : "Rp " + Nu
 const wib = (iso, withTime) => { if (!iso) return ""; const d = new Date(iso); if (isNaN(d)) return "";
   const o = {timeZone:"Asia/Jakarta", day:"2-digit", month:"2-digit", year:"numeric"}; if (withTime) Object.assign(o, {hour:"2-digit", minute:"2-digit", hour12:false});
   return d.toLocaleString("en-GB", o).replace(",", ""); };
-const dmy = iso => { if (!iso) return ""; const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleDateString("en-GB", {timeZone:"UTC", day:"2-digit", month:"short", year:"numeric"}); };
+const dmy = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); if (!m) return "";
+  return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).toLocaleDateString("en-GB", {timeZone:"UTC", day:"2-digit", month:"short", year:"numeric"}); };
 const PK = [["Lite 100 Mbps","lite 100"],["BIZ Regular 100 Mbps","regular 100"],["Lite 200 Mbps","lite 200"],["BIZ Regular 200 Mbps","regular 200"],
             ["Lite 300 Mbps","lite 300"],["BIZ Regular 300 Mbps","regular 300"],["Lite 500 Mbps","lite 500"],["BIZ Regular 500 Mbps","regular 500"]];
 const PKKEYS = {"lite 100":"PkgL100","regular 100":"PkgB100","lite 200":"PkgL200","regular 200":"PkgB200","lite 300":"PkgL300","regular 300":"PkgB300","lite 500":"PkgL500","regular 500":"PkgB500"};
