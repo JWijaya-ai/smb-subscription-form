@@ -27,6 +27,15 @@ main{max-width:760px;margin:-2px auto 0;padding:18px 16px 60px}
 .stepper{display:flex;gap:6px;margin:6px 0 16px}
 .stepper .s{flex:1;height:6px;border-radius:99px;background:#E7DED9;transition:.3s}
 .stepper .s.on{background:var(--brand)}
+.savebar{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.savestate{font-size:12px;color:var(--muted);white-space:nowrap}
+.savestate.ok::before{content:"● ";color:var(--ok)}
+.savestate.busy::before{content:"● ";color:#E0A100}
+.resume{background:#FFF8F4;border:1px solid var(--peach-line);border-radius:14px;padding:14px 16px;margin:0 0 14px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.resume b{font-size:14px}.resume small{color:var(--muted);display:block}
+.resume .grow{flex:1;min-width:200px}
+.tip{display:inline-block;margin-left:6px;width:16px;height:16px;border-radius:50%;background:#EDE6E2;color:var(--muted);font-size:11px;line-height:16px;text-align:center;cursor:help;position:relative}
+.tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;left:22px;top:-6px;width:240px;background:#2B2B2B;color:#fff;font-size:12px;font-weight:400;line-height:1.4;padding:8px 10px;border-radius:8px;z-index:9;text-align:left}
 .steplabel{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;letter-spacing:.02em}
 .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:22px 20px;border:1px solid #F0E6E0}
 .card h2{margin:0 0 4px;font-size:19px;font-weight:800}
@@ -115,7 +124,10 @@ input[readonly]{background:var(--peach);color:#7a4a35}
 <main>
   <div id="demo" class="demo">Preview mode — no data is sent. Set <code>ENDPOINT</code> in the page config to go live.</div>
   <div class="stepper" id="stepper"></div>
-  <div class="steplabel" id="steplabel"></div>
+  <div id="resume" class="resume hidden"><div class="grow"><b>Lanjutkan isian sebelumnya? / Resume your draft?</b><small id="resumeInfo"></small></div>
+    <button type="button" class="btn sec" id="resumeNo" style="padding:9px 14px">Mulai baru / Start over</button>
+    <button type="button" class="btn" id="resumeYes" style="padding:9px 14px">Lanjutkan / Resume</button></div>
+  <div class="savebar"><div class="steplabel" id="steplabel"></div><div class="savestate" id="saveState"></div></div>
 
   <form id="f" novalidate autocomplete="on">
     <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
@@ -148,8 +160,8 @@ input[readonly]{background:var(--peach);color:#7a4a35}
           <input type="email" id="email" name="email" placeholder="nama@perusahaan.com" data-req data-type="email"><div class="err">Email tidak valid / Invalid email</div>
         </div>
         <div class="field">
-          <label class="f" for="npwp">Nomor NPWP <span class="en npwp-opt">/ Tax no. (optional)</span><span class="en npwp-req hidden">/ Tax registration no.</span> <span class="req pt-req hidden">*</span></label>
-          <input type="text" id="npwp" name="npwp" inputmode="numeric" placeholder="00.000.000.0-000.000" data-req="pt"><div class="err">Wajib untuk PT / Required for a PT</div>
+          <label class="f" for="npwp">Nomor NPWP <span class="en npwp-opt">/ Tax no. (optional)</span><span class="en npwp-req hidden">/ Tax registration no.</span> <span class="req pt-req hidden">*</span><span class="tip" tabindex="0" data-tip="15 atau 16 digit, sesuai kartu NPWP. Wajib untuk PT. / 15 or 16 digits as on the NPWP card. Required for a PT.">i</span></label>
+          <input type="text" id="npwp" name="npwp" inputmode="numeric" placeholder="00.000.000.0-000.000" data-req="pt"><div class="err">Wajib untuk PT, 15-16 digit / Required for a PT, 15-16 digits</div>
         </div>
         <div class="field full">
           <label class="check"><input type="checkbox" id="billSame" checked> <span>Email penagihan sama dengan email di atas <span class="en" style="color:var(--muted)">/ Billing email is the same</span></span></label>
@@ -262,7 +274,7 @@ input[readonly]{background:var(--peach);color:#7a4a35}
           <div class="err">Pilih opsi pembayaran / Choose a payment option</div>
         </div>
         <div class="field">
-          <label class="f" for="readyDate">Tanggal Siap Pasang <span class="en">/ Expected install date</span> <span class="req">*</span></label>
+          <label class="f" for="readyDate">Tanggal Siap Pasang <span class="en">/ Expected install date</span> <span class="req">*</span><span class="tip" tabindex="0" data-tip="Perkiraan tanggal lokasi siap dipasang. Tim kami akan konfirmasi jadwal. / When the site is ready; our team confirms the schedule.">i</span></label>
           <input type="date" id="readyDate" name="readyDate" data-req><div class="err">Wajib diisi / Required</div>
         </div>
         <div class="field full">
@@ -551,12 +563,56 @@ $("#next").onclick = async ()=>{
       const j = await r.json(); if (!j.ok) throw new Error(j.error||"Gagal"); ref = j.ref;
     } else { await new Promise(r=>setTimeout(r,900)); ref = "PREVIEW-" + Date.now().toString().slice(-6); console.log("Payload (preview):", {...data, files: data.files.map(f=>({...f,b64:f.b64.length+" chars"}))}); }
     steps.forEach(s=>s.classList.add("hidden")); $("#nav").classList.add("hidden"); $("#stepper").classList.add("hidden"); $("#steplabel").classList.add("hidden");
-    $("#refNo").textContent = ref; $("#doneCard").classList.remove("hidden"); window.scrollTo({top:0,behavior:"smooth"});
+    store.del(); draftOn = false; saveState("", ""); $("#refNo").textContent = ref; $("#doneCard").classList.remove("hidden"); window.scrollTo({top:0,behavior:"smooth"});
   } catch(err){
     alert("Maaf, pengiriman gagal. Periksa koneksi lalu coba lagi.\nSubmission failed, please try again.\n\n"+err.message);
     btn.disabled=false; btn.textContent="Kirim Permohonan";
   }
 };
+
+/* ===== draft auto-save (photos are not stored) ===== */
+const DRAFT_KEY = "lnk_smb_form_draft_v1" + (params.get("ch")||"") + (params.get("sales")||"");
+const store = { get(){ try{ return JSON.parse(localStorage.getItem(DRAFT_KEY)||"null"); }catch(e){ return null; } },
+                set(v){ try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(v)); return true; }catch(e){ return false; } },
+                del(){ try{ localStorage.removeItem(DRAFT_KEY); }catch(e){} } };
+const FIELDS = () => $$("main input[id],main textarea[id],main select[id]").filter(e=>e.type!=="file" && e.id!=="agree" && e.name!=="website");
+let saveTimer = null, draftOn = false;
+function saveState(txt, cls){ const e=$("#saveState"); e.textContent = txt; e.className = "savestate " + (cls||""); }
+function snapshot(){
+  const vals = {}; FIELDS().forEach(e=> vals[e.id] = e.type==="checkbox" ? e.checked : e.value);
+  return { t: Date.now(), cur, vals, st: { ch: st.ch, loc: st.loc, pkg: st.pkg, pay: st.pay, coords: st.coords } };
+}
+function scheduleSave(){
+  if (!draftOn) return;
+  saveState("Menyimpan… / Saving…", "busy");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{ saveState(store.set(snapshot()) ? "Tersimpan otomatis " + new Date().toLocaleTimeString("id-ID",{hour:"2-digit",minute:"2-digit"}) + " / Saved" : "Draft tidak tersimpan / Not saved", "ok"); }, 600);
+}
+function restore(d){
+  Object.entries(d.vals||{}).forEach(([id,v])=>{ const e=document.getElementById(id); if(!e || e.readOnly) return; if(e.type==="checkbox"){ e.checked=v; e.dispatchEvent(new Event("change")); } else e.value=v; });
+  const s0 = d.st||{};
+  if (s0.ch && !pCh) setCh(s0.ch);
+  ["loc","pay"].forEach(k=>{ if(s0[k]){ const sel = k==="loc" ? "#locChips" : "#payChips"; const b = $$(sel+" .opt").find(x=>x.dataset.v===s0[k]); b && b.click(); } });
+  if (s0.coords){ st.coords = s0.coords; $("#coords").value = s0.coords; $("#geoTxt").textContent = "✓ " + s0.coords; }
+  if (s0.pkg){ st.pkg = s0.pkg; renderPkgs(); }
+  applyPT(); show(Math.min(d.cur||0, steps.length-1));
+  saveState("Draft dipulihkan. Pilih ulang foto dokumen. / Draft restored; please re-select the photos.", "ok");
+}
+document.addEventListener("input", scheduleSave); document.addEventListener("change", scheduleSave);
+document.addEventListener("click", e=>{ if (e.target.closest(".opt,.pcard,#chSeg button")) scheduleSave(); });
+
+/* ===== inline validation when leaving a field ===== */
+document.addEventListener("focusout", e=>{
+  const el = e.target; if (!el.matches || !el.matches("input,textarea")) return;
+  const f = el.closest(".field"); if (!f || f.classList.contains("hidden")) return;
+  const val = (el.value||"").trim(); let bad = false;
+  if (el.dataset.req!==undefined && (el.dataset.req!=="pt" || isPT())) bad = !val;
+  if (!bad && val && el.dataset.type==="email") bad = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+  if (!bad && val && el.dataset.type==="phone") bad = val.replace(/\D/g,"").length < 8;
+  if (!bad && val && el.dataset.type==="zip") bad = !/^\d{5}$/.test(val);
+  if (!bad && val && el.id==="npwp") bad = !/^\d{15,16}$/.test(val.replace(/\D/g,""));
+  f.classList.toggle("bad", bad);
+});
 
 const pCh = chMap[(params.get("ch")||"").toLowerCase()];
 if (pCh){ setCh(pCh); $$("#chSeg button").forEach(b=>b.disabled=true); }
@@ -564,6 +620,15 @@ const pSales = params.get("sales");
 if (pSales){ $("#salesName").value = pSales; $("#salesName").readOnly = true; }
 if (pCh && pSales){ steps = steps.filter(x=>x.dataset.title!=="Sales"); buildStepper(); }
 renderPkgs(); renderDocs(); applyPT(); show(0);
+(function(){
+  const d = store.get();
+  if (d && d.vals && Date.now() - d.t < 14*24*3600*1000){
+    $("#resume").classList.remove("hidden");
+    $("#resumeInfo").textContent = (d.vals.commercialName || d.vals.companyName || "Draft") + " · " + new Date(d.t).toLocaleString("id-ID") + " · foto perlu dipilih ulang / photos must be re-selected";
+    $("#resumeYes").onclick = ()=>{ $("#resume").classList.add("hidden"); restore(d); draftOn = true; };
+    $("#resumeNo").onclick = ()=>{ $("#resume").classList.add("hidden"); store.del(); draftOn = true; saveState("", ""); };
+  } else { draftOn = true; }
+})();
 </script>
 </body>
 </html>
