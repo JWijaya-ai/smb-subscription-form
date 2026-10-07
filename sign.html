@@ -66,8 +66,8 @@ input[type=text]:focus{outline:none;border-color:var(--brand)}
 <div id="main" class="hidden">
 <div class="card">
   <span class="chip">Langkah 1 · Step 1</span>
-  <h2 style="margin-top:8px">Periksa data Anda / Review your details</h2>
-  <p class="sub">Pastikan data di bawah ini dan pada FAB sudah benar sebelum menandatangani. Jika ada yang salah, jangan tanda tangan dan hubungi Sales Anda.<br><i>Please check the details below and in the FAB. If anything is wrong, do not sign and contact your Sales person.</i></p>
+  <h2 style="margin-top:8px" id="revH">Periksa data Anda / Review your details</h2>
+  <p class="sub" id="revSub">Pastikan data di bawah ini dan pada FAB sudah benar sebelum menandatangani. Jika ada yang salah, jangan tanda tangan dan hubungi Sales Anda.<br><i>Please check the details below and in the FAB. If anything is wrong, do not sign and contact your Sales person.</i></p>
   <div class="grid" id="sum"></div>
   <div style="margin-top:14px"><div class="k">Paket dipilih / Selected package</div><div class="pk" id="pk"></div></div>
 </div>
@@ -222,6 +222,8 @@ else {
     $("#hdrSub").textContent = "FAB approval · " + who + " · tanda tangan elektronik / e-signature";
     $("#signIntro").innerHTML = "Periksa FAB di atas, lalu tanda tangani sebagai <b>" + who + "</b> PT Link Net Tbk. <i>Review the FAB above, then sign as " + who + ".</i>";
     $("#agTxt").innerHTML = "Saya telah memeriksa Formulir Berlangganan ini dan menyetujuinya atas nama PT Link Net Tbk.<br><i>I have reviewed this Subscription Form and approve it on behalf of PT Link Net Tbk.</i>";
+    $("#revH").textContent = "Periksa FAB / Review the FAB";
+    $("#revSub").innerHTML = "Periksa data pelanggan, paket dan harga di bawah ini dan pada dokumen FAB sebelum menyetujui. Jika ada yang salah, jangan tanda tangan dan hubungi Sales Ops.<br><i>Check the customer, package and price below and in the FAB before approving. If anything is wrong, do not sign and contact Sales Ops.</i>";
     $("#doneTxt").innerHTML = "Persetujuan Anda untuk FAB <b id=\"dNo\"></b> sudah kami terima. <i>Your approval has been recorded. The FAB PDF is rebuilt with your signature in 1-3 minutes.</i>";
   }
   const signedNote = at => at ? '<div class="ok">&#10003; Ditandatangani / Signed<br>' + esc(wib(at, true)) + ' WIB</div>' : "";
