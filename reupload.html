@@ -78,6 +78,7 @@ let P = null; const files = {};
 try{
   const h = location.hash.slice(1).split("&")[0];
   P = JSON.parse(decodeURIComponent(escape(atob(h.replace(/-/g,"+").replace(/_/g,"/")))));
+  if (P && Array.isArray(P.d)) P.d = P.d.map(x => Array.isArray(x) ? x : [x.c, x.l, x.r, x.i]);   // flow sends {c,l,r,i}
   if (!(P.id > 0) || !/^[A-Za-z0-9-]{8,64}$/.test(P.k||"") || !Array.isArray(P.d) || !P.d.length) P = null;
 }catch(e){ P = null; }
 const focus = new URLSearchParams(location.hash.split("&").slice(1).join("&")).get("doc");
