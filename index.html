@@ -36,6 +36,13 @@ main{max-width:760px;margin:-2px auto 0;padding:18px 16px 60px}
 .resume .grow{flex:1;min-width:200px}
 .tip{display:inline-block;margin-left:6px;width:16px;height:16px;border-radius:50%;background:#EDE6E2;color:var(--muted);font-size:11px;line-height:16px;text-align:center;cursor:help;position:relative}
 .tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;left:22px;top:-6px;width:240px;background:#2B2B2B;color:#fff;font-size:12px;font-weight:400;line-height:1.4;padding:8px 10px;border-radius:8px;z-index:9;text-align:left}
+.zipmsg{font-size:12.5px;margin-top:6px;min-height:16px;color:var(--muted)}
+.zipmsg.ok{color:var(--ok);font-weight:600}.zipmsg.bad{color:var(--err);font-weight:600}
+.spin.dark{border-color:rgba(0,0,0,.15);border-top-color:var(--brand);width:12px;height:12px;border-width:2px}
+input.auto{background:#F6F3F1;color:var(--ink);border-style:dashed}
+.autotag{font-size:10.5px;font-weight:700;color:var(--muted);background:#EDE6E2;border-radius:999px;padding:2px 7px;margin-left:6px;vertical-align:1px}
+.codeok{font-size:12.5px;margin-top:6px;min-height:16px}
+.codeok.ok{color:var(--ok);font-weight:600}.codeok.bad{color:var(--err);font-weight:600}
 .steplabel{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;letter-spacing:.02em}
 .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:22px 20px;border:1px solid #F0E6E0}
 .card h2{margin:0 0 4px;font-size:19px;font-weight:800}
@@ -207,16 +214,24 @@ input[readonly]{background:var(--peach);color:#7a4a35}
           <input type="text" id="rtrw" name="rtrw" placeholder="003/005">
         </div>
         <div class="field">
-          <label class="f" for="area">Kelurahan, Kecamatan <span class="req">*</span></label>
-          <input type="text" id="area" name="area" placeholder="Bangka, Mampang Prapatan" data-req><div class="err">Wajib diisi / Required</div>
-        </div>
-        <div class="field">
-          <label class="f" for="city">Kota <span class="en">/ City</span> <span class="req">*</span></label>
-          <input type="text" id="city" name="city" placeholder="Jakarta Selatan" data-req><div class="err">Wajib diisi / Required</div>
-        </div>
-        <div class="field">
           <label class="f" for="zip">Kode Pos <span class="en">/ Postal code</span> <span class="req">*</span></label>
-          <input type="text" id="zip" name="zip" inputmode="numeric" maxlength="5" placeholder="12730" data-req data-type="zip"><div class="err">5 digit</div>
+          <input type="text" id="zip" name="zip" inputmode="numeric" maxlength="5" placeholder="12730" data-req data-type="zip" autocomplete="postal-code">
+          <div class="zipmsg" id="zipMsg" aria-live="polite">Kelurahan, kecamatan &amp; kota terisi otomatis. / Filled in from the postal code.</div>
+          <div class="err">Kode pos 5 digit yang valid / A valid 5-digit postal code</div>
+        </div>
+        <div class="field">
+          <label class="f" for="kel">Kelurahan <span class="req">*</span></label>
+          <select id="kel" name="kel"><option value="">Isi kode pos dulu / Enter the postal code first</option></select>
+          <div class="err">Pilih kelurahan / Choose the kelurahan</div>
+        </div>
+        <div class="field">
+          <label class="f" for="kec">Kecamatan <span class="autotag">otomatis</span></label>
+          <input type="text" id="kec" name="kec" class="auto" readonly tabindex="-1" placeholder="—">
+        </div>
+        <div class="field">
+          <label class="f" for="city">Kota / Kabupaten <span class="autotag">otomatis</span></label>
+          <input type="text" id="city" name="city" class="auto" readonly tabindex="-1" placeholder="—">
+          <input type="hidden" id="area" name="area"><input type="hidden" id="prov" name="prov">
         </div>
         <div class="field full">
           <label class="f">Titik Lokasi <span class="en">/ Map location (optional, speeds up coverage check)</span></label>
@@ -234,7 +249,12 @@ input[readonly]{background:var(--peach);color:#7a4a35}
       <h2>Informasi Sales <span class="en" style="font-weight:500;color:var(--muted);font-size:15px">/ Sales info</span></h2>
       <p class="hint">Siapa sales yang membantu Anda? / Who is the sales person helping you?</p>
       <div class="field full">
-        <label class="f">Sales dari <span class="en">/ Sales from</span> <span class="req">*</span></label>
+        <label class="f" for="salesCode">Kode Sales <span class="en">/ Sales code</span> <span class="req">*</span></label>
+        <input type="text" id="salesCode" name="salesCode" placeholder="Contoh / e.g. LN01" maxlength="8" autocapitalize="characters" data-req data-type="scode" style="text-transform:uppercase;max-width:220px">
+        <div class="codeok" id="codeMsg" aria-live="polite">Ada di link atau QR dari sales Anda. / It is on the link or QR code from your sales person.</div>
+        <div class="err">Kode sales tidak dikenal / Unknown sales code</div>
+      </div>
+      <div class="field full hidden">
         <div class="seg" id="chSeg">
           <button type="button" data-ch="LINKNET"><b>Linknet</b><small>Direct sales</small></button>
           <button type="button" data-ch="MORA"><b>MORA</b><small>Partner channel</small></button>
@@ -244,10 +264,9 @@ input[readonly]{background:var(--peach);color:#7a4a35}
       </div>
       <div class="grid" style="margin-top:16px">
         <div class="field full">
-          <label class="f" for="salesName">Nama Sales <span class="en">/ Sales name</span> <span class="req">*</span></label>
-          <input type="text" id="salesName" name="salesName" list="salesList" placeholder="e.g. Budi Santoso" data-req>
+          <label class="f" for="salesName">Nama Sales <span class="en">/ Sales name (opsional)</span></label>
+          <input type="text" id="salesName" name="salesName" list="salesList" placeholder="e.g. Budi Santoso">
           <datalist id="salesList"></datalist>
-          <div class="err">Wajib diisi / Required</div>
         </div>
         <div class="field full">
           <label class="f" for="salesPhone">No. HP Sales <span class="en">/ Sales phone (optional)</span></label>
@@ -435,6 +454,65 @@ $("#geoBtn").onclick = () => {
   }, ()=>{ $("#geoTxt").textContent = "Lokasi tidak diizinkan — tidak apa-apa, lanjutkan saja."; }, {enableHighAccuracy:true,timeout:10000});
 };
 
+// postal code -> kelurahan / kecamatan / kota
+const KODEPOS_BASE = "kodepos/";          // one JSON file per first two digits
+const KP = {}; let zipSeq = 0; st.zipOk = false; st.zipRows = [];
+const kpShard = p => KP[p] || (KP[p] = fetch(KODEPOS_BASE + p + ".json").then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }));
+const kelRow = () => { const i = st.zipRows.findIndex(r=>r[0]+"|"+r[1]===$("#kel").value); return i<0 ? [] : st.zipRows[i]; };
+function zipMsg(txt, cls, html){ const m=$("#zipMsg"); m.className = "zipmsg " + (cls||""); if (html) m.innerHTML = txt; else m.textContent = txt; }
+function fillFromKel(){
+  const r = kelRow(), rows = st.zipRows, uniq = i => [...new Set(rows.map(x=>x[i]))];
+  $("#kec").value = r[1] || (uniq(1).length===1 ? uniq(1)[0] : "");
+  $("#city").value = r[2] || (uniq(2).length===1 ? uniq(2)[0] : "");
+  $("#prov").value = r[3] || (uniq(3).length===1 ? uniq(3)[0] : "");
+  $("#area").value = r[0] ? r[0]+", "+r[1] : "";
+  if (r[0]) { $("#kel").dataset.want = $("#kel").value; $("#kel").closest(".field").classList.remove("bad"); }
+}
+async function lookupZip(){
+  const z = $("#zip").value.replace(/\D/g,"").slice(0,5), my = ++zipSeq, want = $("#kel").dataset.want || "";
+  if ($("#zip").value !== z) $("#zip").value = z;
+  st.zipOk = false; st.zipRows = [];
+  $("#kel").innerHTML = '<option value="">Isi kode pos dulu / Enter the postal code first</option>'; $("#kel").disabled = true; fillFromKel();
+  if (z.length < 5){ zipMsg(z ? "Kode pos 5 digit / 5 digits" : "Kelurahan, kecamatan & kota terisi otomatis. / Filled in from the postal code."); return; }
+  zipMsg('<span class="spin dark"></span>Mencari lokasi… / Looking up…', "", true);
+  try{
+    const rows = (await kpShard(z.slice(0,2)))[z] || [];
+    if (my !== zipSeq) return;
+    if (!rows.length){ zipMsg("Kode pos tidak ditemukan. Periksa lagi. / Postal code not found, please check it.", "bad"); $("#zip").closest(".field").classList.add("bad"); return; }
+    st.zipRows = rows; st.zipOk = true; $("#kel").disabled = false;
+    $("#kel").innerHTML = (rows.length>1 ? '<option value="">Pilih kelurahan / Choose…</option>' : "") + rows.map(r=>`<option value="${r[0]}|${r[1]}">${r[0]}${rows.some(x=>x[0]===r[0]&&x[1]!==r[1]) ? " ("+r[1]+")" : ""}</option>`).join("");
+    if (rows.some(r=>r[0]+"|"+r[1]===want)) $("#kel").value = want;
+    fillFromKel(); $("#zip").closest(".field").classList.remove("bad");
+    zipMsg("✓ Lokasi ditemukan / Location found" + (rows.length>1 && !kelRow()[0] ? " · pilih kelurahan / choose the kelurahan" : ""), "ok");
+  }catch(e){
+    if (my !== zipSeq) return; delete KP[z.slice(0,2)];
+    zipMsg("Tidak bisa memeriksa kode pos. Periksa koneksi lalu ketik ulang. / Could not check the postal code; check your connection and retype it.", "bad");
+  }
+}
+$("#zip").addEventListener("input", lookupZip);
+$("#kel").addEventListener("change", ()=>{ fillFromKel(); if (kelRow()[0]) zipMsg("✓ Lokasi ditemukan / Location found", "ok"); });
+
+// sales code (referral): LN = Linknet direct, MR = MORA, ML = Micro
+const SC_RE = /^(LN|MR|ML)\d{2,4}$/, SC_CH = {LN:"LINKNET", MR:"MORA", ML:"MICRO"}, SC_NAME = {LINKNET:"Linknet direct sales", MORA:"MORA partner", MICRO:"Micro business"};
+let codeState = {code:"", ok:null}, codeSeq = 0;
+const codeOk = () => { const c = v("salesCode").toUpperCase(); return SC_RE.test(c) && !(codeState.code===c && codeState.ok===false); };
+function codeMsg(txt, cls){ const m=$("#codeMsg"); m.className = "codeok " + (cls||""); m.textContent = txt; }
+async function checkCode(){
+  const el = $("#salesCode"), c = el.value.trim().toUpperCase(), my = ++codeSeq;
+  if (!c){ codeMsg("Ada di link atau QR dari sales Anda. / It is on the link or QR code from your sales person."); return; }
+  if (!SC_RE.test(c)){ codeMsg("Format: LN / MR / ML + angka, contoh LN01 / e.g. LN01", c.length>=4 ? "bad" : ""); return; }
+  setCh(SC_CH[c.slice(0,2)]);
+  codeMsg("✓ " + SC_NAME[st.ch] + " · " + c, "ok");
+  if (!CONFIG.ENDPOINT) return;
+  try{
+    const r = await fetch(CONFIG.ENDPOINT, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body: JSON.stringify({type:"checkcode", code:c})});
+    const j = await r.json(); if (my !== codeSeq) return;
+    codeState = {code:c, ok: j.ok ? j.valid !== false : null};
+    if (codeState.ok === false){ codeMsg("Kode sales tidak dikenal atau tidak aktif. Tanyakan ke sales Anda. / Unknown or inactive sales code.", "bad"); el.closest(".field").classList.add("bad"); }
+  }catch(e){ /* offline: the intake flow checks the code again */ }
+}
+$("#salesCode").addEventListener("input", e=>{ const p = e.target.selectionStart; e.target.value = e.target.value.toUpperCase().replace(/\s/g,""); try{ e.target.setSelectionRange(p,p); }catch(_){} checkCode(); });
+
 // packages
 const rp = n => "Rp " + n.toLocaleString("id-ID");
 const pkgs = () => CONFIG.PACKAGES[st.ch==="MICRO"?"MICRO":"BIZ"];
@@ -496,18 +574,19 @@ function validStep(i){
   let ok = true; const s = steps[i], T = s.dataset.title;
   const micro = st.ch==="MICRO", pt = isPT();
   const mark = (el,bad)=>{ const f = el.closest(".field"); if(f) f.classList.toggle("bad",bad); if(bad) ok=false; };
-  if (T==="Sales"){ mark($("#chSeg"), !st.ch); }
+  if (T==="Sales"){ mark($("#salesCode"), !codeOk()); }
   s.querySelectorAll("input[data-req],textarea[data-req]").forEach(el=>{
     const f = el.closest(".field"); if (f && f.classList.contains("hidden")) return;
     if (el.dataset.req==="pt" && !pt) return;
     let bad = !el.value.trim();
     if (!bad && el.dataset.type==="email") bad = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim());
     if (!bad && el.dataset.type==="phone") bad = el.value.replace(/\D/g,"").length < 8;
-    if (!bad && el.dataset.type==="zip") bad = !/^\d{5}$/.test(el.value.trim());
+    if (!bad && el.dataset.type==="zip") bad = !st.zipOk;
+    if (!bad && el.dataset.type==="scode") bad = !codeOk();
     mark(el,bad);
   });
   if (T==="Pelanggan" && !$("#billSame").checked){ const v=$("#billingEmail").value.trim(); mark($("#billingEmail"), !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)); }
-  if (T==="Alamat"){ mark($("#locChips"), !st.loc); if (st.loc==="Building / mall") mark($("#building"), !$("#building").value.trim()); }
+  if (T==="Alamat"){ mark($("#kel"), st.zipOk && !$("#kel").value); mark($("#locChips"), !st.loc); if (st.loc==="Building / mall") mark($("#building"), !$("#building").value.trim()); }
   if (T==="Layanan"){ mark($("#pkErr"), !st.pkg); if(!micro) mark($("#payChips"), !st.pay);
     if (!$("#techSame").checked){ mark($("#techName"), !$("#techName").value.trim()); mark($("#techPhone"), $("#techPhone").value.replace(/\D/g,"").length<8); } }
   if (T==="Dokumen"){ docDefs().forEach(d=>{ const f = $(`[data-doc="${d.code}"]`); const bad = d.req && !st.files[d.code]; f.classList.toggle("bad",bad); if(bad) ok=false; }); }
@@ -523,14 +602,14 @@ const v = id => ($("#"+id).value||"").trim();
 function payload(){
   const micro = st.ch==="MICRO", p = pkgs().find(x=>x.code===st.pkg)||{};
   return {
-    source:"webform", channel: st.ch, salesName: v("salesName"), salesPhone: v("salesPhone"),
+    source:"webform", channel: st.ch, salesCode: v("salesCode").toUpperCase(), salesName: v("salesName"), salesPhone: v("salesPhone"),
     companyName: v("companyName"), commercialName: v("commercialName"), isPT: isPT(),
     authPerson: v("authPerson"), authTitle: v("authTitle"),
     email: v("email"), billingEmail: $("#billSame").checked ? v("email") : v("billingEmail"),
     npwp: v("npwp"), phone1: v("phone1"), phone2: v("phone2"),
     locationType: st.loc, street: v("street"), building: v("building"), rtrw: v("rtrw"),
-    area: v("area"), city: v("city"), zip: v("zip"), coords: st.coords,
-    fullAddress: [v("street"), v("building"), v("rtrw") ? "RT/RW "+v("rtrw") : "", v("area"), v("city"), v("zip")].filter(Boolean).join(", "),
+    area: v("area"), kelurahan: kelRow()[0]||"", kecamatan: v("kec"), city: v("city"), province: v("prov"), zip: v("zip"), coords: st.coords,
+    fullAddress: [v("street"), v("building"), v("rtrw") ? "RT/RW "+v("rtrw") : "", kelRow()[0] ? "Kel. "+kelRow()[0] : "", v("kec") ? "Kec. "+v("kec") : "", v("city"), [v("prov"), v("zip")].filter(Boolean).join(" ")].filter(Boolean).join(", "),
     package: st.pkg, monthlyFee: p.price||0, paymentOption: micro ? "Monthly" : st.pay, readyDate: v("readyDate"),
     techName: $("#techSame").checked ? v("authPerson") : v("techName"),
     techPhone: $("#techSame").checked ? v("phone1") : v("techPhone"),
@@ -545,7 +624,7 @@ function buildSummary(){
   $("#summary").innerHTML = `
     <div class="sumsec" style="border:0;margin:0;padding:0"><h3>Pelanggan</h3><dl class="sum">${row("Perusahaan",d.companyName)}${row("Komersial",d.commercialName)}${row("Penanggung jawab",d.authPerson + (d.authTitle?" ("+d.authTitle+")":""))}${row("NPWP",d.npwp)}${row("Email",d.email)}${d.billingEmail!==d.email?row("Email tagihan",d.billingEmail):""}${row("Telepon",[d.phone1,d.phone2].filter(Boolean).join(" · "))}</dl></div>
     <div class="sumsec"><h3>Alamat</h3><dl class="sum">${row("Lokasi",d.locationType)}${row("Alamat",d.fullAddress)}${row("Titik",d.coords)}</dl></div>
-    <div class="sumsec"><h3>Sales</h3><dl class="sum">${row("Saluran",chName)}${row("Sales",d.salesName)}</dl></div>
+    <div class="sumsec"><h3>Sales</h3><dl class="sum">${row("Kode sales",d.salesCode)}${row("Saluran",chName)}${row("Sales",d.salesName)}</dl></div>
     <div class="sumsec"><h3>Layanan</h3><dl class="sum">${row("Paket",d.package+" · "+rp(d.monthlyFee)+"/bln")}${!micro?row("Pembayaran",d.paymentOption):""}${row("Siap pasang",d.readyDate)}${row("PJ teknis",d.techName+" · "+d.techPhone)}${row("Catatan",d.notes)}</dl></div>
     <div class="sumsec"><h3>Dokumen</h3><dl class="sum">${docDefs().map(x=>row(x.t, st.files[x.code]?"✓ Terunggah":"—")).join("")}</dl></div>`;
 }
@@ -571,7 +650,7 @@ $("#next").onclick = async ()=>{
 };
 
 /* ===== draft auto-save (photos are not stored) ===== */
-const DRAFT_KEY = "lnk_smb_form_draft_v1" + (params.get("ch")||"") + (params.get("sales")||"");
+const DRAFT_KEY = "lnk_smb_form_draft_v1" + (params.get("ch")||"") + (params.get("sales")||"") + (params.get("ref")||"");
 const store = { get(){ try{ return JSON.parse(localStorage.getItem(DRAFT_KEY)||"null"); }catch(e){ return null; } },
                 set(v){ try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(v)); return true; }catch(e){ return false; } },
                 del(){ try{ localStorage.removeItem(DRAFT_KEY); }catch(e){} } };
@@ -595,6 +674,8 @@ function restore(d){
   ["loc","pay"].forEach(k=>{ if(s0[k]){ const sel = k==="loc" ? "#locChips" : "#payChips"; const b = $$(sel+" .opt").find(x=>x.dataset.v===s0[k]); b && b.click(); } });
   if (s0.coords){ st.coords = s0.coords; $("#coords").value = s0.coords; $("#geoTxt").textContent = "✓ " + s0.coords; }
   if (s0.pkg){ st.pkg = s0.pkg; renderPkgs(); }
+  if ($("#zip").value){ $("#kel").dataset.want = (d.vals||{}).kel || ""; lookupZip(); }
+  if ($("#salesCode").value) checkCode();
   applyPT(); show(Math.min(d.cur||0, steps.length-1));
   saveState("Draft dipulihkan. Pilih ulang foto dokumen. / Draft restored; please re-select the photos.", "ok");
 }
@@ -610,6 +691,7 @@ document.addEventListener("focusout", e=>{
   if (!bad && val && el.dataset.type==="email") bad = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
   if (!bad && val && el.dataset.type==="phone") bad = val.replace(/\D/g,"").length < 8;
   if (!bad && val && el.dataset.type==="zip") bad = !/^\d{5}$/.test(val);
+  if (!bad && val && el.dataset.type==="scode") bad = !SC_RE.test(val.toUpperCase());
   if (!bad && val && el.id==="npwp") bad = !/^\d{15,16}$/.test(val.replace(/\D/g,""));
   f.classList.toggle("bad", bad);
 });
@@ -617,8 +699,9 @@ document.addEventListener("focusout", e=>{
 const pCh = chMap[(params.get("ch")||"").toLowerCase()];
 if (pCh){ setCh(pCh); $$("#chSeg button").forEach(b=>b.disabled=true); }
 const pSales = params.get("sales");
-if (pSales){ $("#salesName").value = pSales; $("#salesName").readOnly = true; }
-if (pCh && pSales){ steps = steps.filter(x=>x.dataset.title!=="Sales"); buildStepper(); }
+const pRef = (params.get("ref") || params.get("code") || (SC_RE.test((pSales||"").toUpperCase()) ? pSales : "") || "").trim().toUpperCase();
+if (pSales && !SC_RE.test(pSales.toUpperCase())){ $("#salesName").value = pSales; $("#salesName").readOnly = true; }
+if (SC_RE.test(pRef)){ $("#salesCode").value = pRef; $("#salesCode").readOnly = true; checkCode(); steps = steps.filter(x=>x.dataset.title!=="Sales"); buildStepper(); }
 renderPkgs(); renderDocs(); applyPT(); show(0);
 (function(){
   const d = store.get();
