@@ -30,6 +30,12 @@ input:focus{outline:none;border-color:var(--brand)}
 .pad canvas{display:block;width:100%;height:190px;border-radius:12px;cursor:crosshair}
 .pad .hint{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#c9b7ad;font-size:14px;pointer-events:none}
 .pad .base{position:absolute;left:18px;right:18px;bottom:38px;border-bottom:1px solid #eadfd8;pointer-events:none}
+.seg{display:flex;gap:6px;margin-top:12px;background:#f4ece8;border-radius:12px;padding:4px}
+.seg button{flex:1;border:0;border-radius:9px;padding:9px;font:inherit;font-weight:700;font-size:14px;background:none;color:var(--muted);cursor:pointer}
+.seg button.on{background:#fff;color:var(--brand);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.up{border:1.5px dashed var(--brand);border-radius:12px;background:#fff;margin-top:12px;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:14px;text-align:center;cursor:pointer}
+.up img{max-width:100%;max-height:150px}
+.up .sub{margin:0;font-size:12px}
 .tools{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:12px;color:var(--muted)}
 .lnk{background:none;border:0;color:var(--brand);font:inherit;font-weight:700;cursor:pointer;padding:4px}
 .lnk:disabled{color:#c9b7ad;cursor:default}
@@ -82,8 +88,18 @@ input:focus{outline:none;border-color:var(--brand)}
     <div><label class="f" for="nm">Nama lengkap / Full name</label><input type="text" id="nm" maxlength="80" autocomplete="name"></div>
     <div><label class="f" for="tt">Jabatan / Title</label><input type="text" id="tt" maxlength="60"></div>
   </div>
+  <div class="seg" role="tablist"><button type="button" id="mDraw" class="on">✍️ Gambar / Draw</button><button type="button" id="mUp">🖼 Unggah foto / Upload</button></div>
+  <div id="boxDraw">
   <div class="pad"><canvas id="cv"></canvas><div class="base"></div><div class="hint" id="hint">Tanda tangan di sini / Sign here</div></div>
   <div class="tools"><span>Gunakan jari atau mouse / Use your finger or mouse</span><button class="lnk" id="clr" type="button">Hapus / Clear</button></div>
+  </div>
+  <div id="boxUp" class="hidden">
+  <label class="up" for="file" id="upLbl"><span style="font-size:30px">📷</span><b>Pilih foto tanda tangan / Choose a signature photo</b>
+    <p class="sub">Tanda tangan dengan tinta gelap di kertas putih. PNG atau JPG, maks. 5 MB.<br><i>Dark ink on white paper. PNG or JPG, max. 5 MB.</i></p>
+    <img id="upImg" class="hidden" alt="Signature preview"></label>
+  <input type="file" id="file" accept="image/png,image/jpeg" class="hidden">
+  <div class="tools"><span id="upInfo"></span><button class="lnk hidden" id="upClr" type="button">Ganti / Change</button></div>
+  </div>
   <label class="agree"><input type="checkbox" id="ag"><span id="agTxt"></span></label>
   <button class="btn" id="go" disabled>Tanda tangani FAB / Sign the FAB</button>
   <div class="err" id="err2"></div>
@@ -163,11 +179,44 @@ else {
     o.width = Math.round(sw * sc); o.height = Math.round(sh * sc); const oc = o.getContext("2d"); oc.fillStyle = "#fff"; oc.fillRect(0, 0, o.width, o.height);
     oc.drawImage(cv, x0, y0, sw, sh, 0, 0, o.width, o.height); return o.toDataURL("image/png");
   }
-  function check() { $("#go").disabled = !(S && dirty && $("#ag").checked && $("#nm").value.trim().length >= 3 && $("#tt").value.trim().length >= 2); }
+  // signature photo upload: decoded and re-drawn on a canvas (ink only, white background, cropped, PNG) so the original file is never sent
+  let mode = "pad", upSig = null; const MAXMB = 5;
+  function setMode(m) { mode = m; $("#mDraw").classList.toggle("on", m === "pad"); $("#mUp").classList.toggle("on", m === "upload");
+    $("#boxDraw").classList.toggle("hidden", m !== "pad"); $("#boxUp").classList.toggle("hidden", m !== "upload"); if (m === "pad") size(); check(); }
+  $("#mDraw").onclick = () => setMode("pad"); $("#mUp").onclick = () => setMode("upload");
+  function resetUp(msg) { upSig = null; $("#file").value = ""; $("#upImg").classList.add("hidden"); $("#upClr").classList.add("hidden"); $("#upInfo").textContent = msg || ""; check(); }
+  $("#upClr").onclick = () => { resetUp(); $("#file").click(); };
+  $("#file").onchange = () => {
+    const f = $("#file").files[0]; if (!f) return;
+    if (!/^image\/(png|jpeg)$/.test(f.type)) return resetUp("⚠ Hanya PNG atau JPG / Only PNG or JPG");
+    if (f.size > MAXMB * 1048576) return resetUp("⚠ File lebih dari " + MAXMB + " MB / File is over " + MAXMB + " MB");
+    const url = URL.createObjectURL(f), im = new Image();
+    im.onerror = () => { URL.revokeObjectURL(url); resetUp("⚠ Gambar tidak bisa dibaca / The image cannot be read"); };
+    im.onload = () => { URL.revokeObjectURL(url);
+      if (im.naturalWidth < 120 || im.naturalHeight < 40) return resetUp("⚠ Gambar terlalu kecil / Image is too small");
+      const k = Math.min(1, 1600 / im.naturalWidth, 1600 / im.naturalHeight), c = document.createElement("canvas");
+      c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+      const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+      const id = g.getImageData(0, 0, c.width, c.height), d = id.data; let x0 = c.width, y0 = c.height, x1 = 0, y1 = 0, ink = 0;
+      for (let i = 0; i < d.length; i += 4) { const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        if (L > 150) { d[i] = d[i + 1] = d[i + 2] = 255; } else { d[i] = 26; d[i + 1] = 42; d[i + 2] = 108; ink++;
+          const p = i / 4, x = p % c.width, y = (p - x) / c.width; if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y; } d[i + 3] = 255; }
+      const share = ink / (c.width * c.height);
+      if (x1 - x0 < 30 || y1 - y0 < 10 || share < 0.002 || share > 0.35) return resetUp("⚠ Tanda tangan tidak terbaca jelas. Foto ulang di kertas putih. / Signature not clear. Retake it on white paper.");
+      g.putImageData(id, 0, 0);
+      const pad = 8; x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(c.width, x1 + pad); y1 = Math.min(c.height, y1 + pad);
+      const sw = x1 - x0, sh = y1 - y0, sc = Math.min(1, 480 / sw, 160 / sh), o = document.createElement("canvas");
+      o.width = Math.round(sw * sc); o.height = Math.round(sh * sc); const oc = o.getContext("2d"); oc.fillStyle = "#fff"; oc.fillRect(0, 0, o.width, o.height);
+      oc.drawImage(c, x0, y0, sw, sh, 0, 0, o.width, o.height); upSig = o.toDataURL("image/png");
+      $("#upImg").src = upSig; $("#upImg").classList.remove("hidden"); $("#upClr").classList.remove("hidden");
+      $("#upInfo").textContent = "✓ Siap / Ready  ·  periksa pratinjau / check the preview"; check(); };
+    im.src = url;
+  };
+  function check() { $("#go").disabled = !(S && (mode === "pad" ? dirty : !!upSig) && $("#ag").checked && $("#nm").value.trim().length >= 3 && $("#tt").value.trim().length >= 2); }
   ["#nm", "#tt"].forEach(s => $(s).addEventListener("input", check)); $("#ag").addEventListener("change", check);
   $("#go").onclick = async () => {
-    const sig = sigPng(); if (!sig) return; const btn = $("#go"); btn.disabled = true; btn.textContent = "Mengirim… / Sending…"; $("#err2").textContent = "";
-    try { const j = await call(Object.assign({type: "esign", s: S, fn: P.fn || "", ln: P.ln || "", name: $("#nm").value.trim(), title: $("#tt").value.trim(), sig: sig, agree: true}, ID));
+    const sig = mode === "pad" ? sigPng() : upSig; if (!sig) return; const btn = $("#go"); btn.disabled = true; btn.textContent = "Mengirim… / Sending…"; $("#err2").textContent = "";
+    try { const j = await call(Object.assign({type: "esign", s: S, fn: P.fn || "", ln: P.ln || "", name: $("#nm").value.trim(), title: $("#tt").value.trim(), sig: sig, src: mode, agree: true}, ID));
       if (!j.ok) throw new Error(j.error || "Gagal");
       $("#dNo").textContent = P.fn || ""; $("#main").classList.add("hidden"); $("#done").classList.remove("hidden"); window.scrollTo({top: 0});
     } catch (e) { $("#err2").textContent = "Maaf, gagal / Sorry, failed: " + e.message; btn.textContent = "Tanda tangani FAB / Sign the FAB"; check(); }
